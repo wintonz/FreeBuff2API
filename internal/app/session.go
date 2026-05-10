@@ -191,6 +191,13 @@ func (sm *sessionManager) handleResponse(data []byte, upstreamKey string) (strin
 			EstimatedWaitMs: r.EstimatedWaitMs,
 		}
 
+	case "country_blocked", "banned":
+		sm.mu.Lock()
+		delete(sm.instances, upstreamKey)
+		delete(sm.queueStatus, upstreamKey)
+		sm.mu.Unlock()
+		return "", fmt.Errorf("freebuff session %s for key=%s (IP blocked or account banned)", r.Status, fingerprint(upstreamKey))
+
 	case "none", "superseded":
 		sm.mu.Lock()
 		delete(sm.instances, upstreamKey)

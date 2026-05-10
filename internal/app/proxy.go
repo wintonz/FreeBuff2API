@@ -112,8 +112,13 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	isFreeMode := cfg.Upstream.CostMode == "free"
 	if _, ok := req["model"]; !ok || req["model"] == "" {
-		req["model"] = cfg.Upstream.DefaultModel
+		if isFreeMode {
+			req["model"] = freeModeDefaultModel
+		} else {
+			req["model"] = cfg.Upstream.DefaultModel
+		}
 	}
 
 	model, _ := req["model"].(string)
@@ -121,12 +126,11 @@ func (p *ProxyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Free-mode guard: resolve model → (agentId, canonicalModel). Unknown
 	// models are rejected immediately so codebuff never sees an invalid combo.
 	agentID := "base2"
-	isFreeMode := cfg.Upstream.CostMode == "free"
 	if isFreeMode {
 		freeAgent, freeModel, allowed := resolveFreeModeAgent(model)
 		if !allowed {
 			writeSanitized(w, http.StatusForbidden,
-				`{"error":{"message":"该模型不支持免费模式，请使用 google/gemini-3.1-pro-preview、minimax/minimax-m2.7 或 z-ai/glm-5.1","type":"free_mode_model_not_allowed"}}`)
+				`{"error":{"message":"该模型不支持免费模式，请使用 deepseek/deepseek-v4-pro、moonshotai/kimi-k2.6、minimax/minimax-m2.7 或 z-ai/glm-5.1","type":"free_mode_model_not_allowed"}}`)
 			return
 		}
 		agentID = freeAgent
